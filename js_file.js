@@ -1,0 +1,232 @@
+
+let database_name;
+let table_name;
+let table_first_column_id;
+let Column_name;
+let update_form;
+let delete_form
+let select_button;
+
+window.addEventListener("load", () => {
+    const query = {
+        option: "Database_list",
+    };
+
+    console.log("asdf");
+
+    getdata(query)
+        .then(response => {
+            console.log(response);
+            document.getElementById("database_list").innerHTML = response;
+        });
+});
+
+
+function select_database() {
+
+    database_name = document.getElementById("database_list").value;
+
+    const query = {
+        option: "database_name",
+        dbname: database_name
+    };
+
+    getdata(query)
+        .then(response => {
+            console.log(response);
+            document.getElementById("table_list").innerHTML = response;
+        });
+}
+
+function selecte_table() {
+
+    document.getElementById("table_value").innerHTML = "";
+    document.getElementById("table_column_name").innerHTML = "";
+    table_name = document.getElementById("table_list").value;
+    const query = {
+        option: "get_data",
+        dbname: database_name,
+        tableName: table_name
+    };
+
+    getdata(query)
+        .then(response => {
+            console.log(response);
+            if(response[0]==1)
+            {
+                document.getElementById("empty_table").style.display='none';
+                document.getElementById("table_value").innerHTML = response[1][1];
+                document.getElementById("table_column_name").innerHTML = response[1][0];
+                table_first_column_id = response[1][2];
+                Column_name = response[1][3];
+                update_form = response[2];
+                delete_form = response[3];
+            couter();
+            }
+            else{
+                document.getElementById("empty_table").style.display='block';
+            }
+
+        });
+}
+
+
+
+async function getdata(querydata) {
+
+    const fetch_obj = {
+        method: "post",
+        header: {
+            "Content-Type": "application/JSON",
+        },
+        body: JSON.stringify(querydata)
+    };
+
+    return await fetch("index.php", fetch_obj)
+        .then(response => response.json())
+        .then(data => {
+            return data;
+        })
+}
+
+
+
+function couter() {
+    const updateButtons = document.querySelectorAll(".btn-update");
+    for (const updateButton of updateButtons) {
+        updateButton.addEventListener("click", Update_button_RowSelect);
+    }
+    // for the set the button id for delete 
+    const delete_buttons = document.querySelectorAll(".btn-delete");
+    for (const delete_button of delete_buttons) {
+        delete_button.addEventListener("click", Delete_Button_RowSelect);
+    }
+
+}
+
+function remove_value() {
+    const updateButtons = document.querySelectorAll(".btn-update");
+    for (const updateButton of updateButtons) {
+        updateButton.removeEventListener("click", Update_button_RowSelect);
+    }
+    // for the set the button id for delete 
+    const delete_buttons = document.querySelectorAll(".btn-delete");
+    for (const delete_button of delete_buttons) {
+        delete_button.removeEventListener("click", Delete_Button_RowSelect);
+    }
+
+}
+
+
+function Update_button_RowSelect(e) {
+    const clickedButton = e.target;
+    selectedRow = Number(clickedButton.dataset.id);
+    select_button = selectedRow;
+    update_display();
+
+}
+
+function Delete_Button_RowSelect(e) {
+    const clickedButton = e.target;
+    selectedRow = Number(clickedButton.dataset.id);
+    select_button = selectedRow;
+    delete_display();
+}
+
+
+//for the update value alert            
+async function update_display() {
+
+
+    Swal.fire({
+        title: 'update value ',
+        html: update_form,
+
+        focusConfirm: false,
+        preConfirm: async () => {
+            console.log("columnname==" + Column_name);
+            const data = Column_name;
+
+            let str1 = 'UPDATE ' + table_name + ' SET ';
+            let str2 = "";
+
+            for (let i = 1; i < data.length - 1; i++) {
+                str2 += data[i] + '= "' + document.getElementById(data[i]).value + ' ", ';
+            }
+            let str3 = data[data.length - 1] + '= "' + document.getElementById(data[data.length - 1]).value + '" ';
+            let str4 = ' WHERE ' + data[0] + '=' + select_button + ' ;'
+            let str = str1 + str2 + str3 + str4;
+            console.log(str);
+            const querydata = {
+                query: str,
+                option: 'update',
+                dbname: database_name,
+                tableName: table_name
+            };
+
+            const fetch_obj = {
+                method: "post",
+                header: {
+                    "Content-Type": "application/JSON",
+                },
+                body: JSON.stringify(querydata)
+            };
+            return fetch("index.php", fetch_obj)
+
+        },
+    }).then((result) => {
+        if (result.isConfirmed) {
+            console.log("ok" + result);
+            remove_value();
+            selecte_table();
+            Swal.fire(
+                'value will be the updated',
+                'done',
+            )
+        }
+    });
+
+}
+
+
+
+
+async function delete_display() {
+
+    Swal.fire({
+        title: 'Delet The Row ',
+        html: delete_form,
+        showCancelButton: true,
+        confirmButtonText: 'delete',
+        focusConfirm: false,
+        preConfirm: async () => {
+            let str1 = 'DELETE FROM  ' + table_name + ' WHERE  ' + Column_name[0] + ' = ' + select_button + ' ;';
+            console.log(str1);
+            const querydata = {
+                query: str1,
+                option: 'delete',
+                dbname: database_name,
+                tableName: table_name
+            };
+            const fetch_obj = {
+                method: "post",
+                header: {
+                    "Content-Type": "application/JSON",
+                },
+                body: JSON.stringify(querydata)
+            };
+            return fetch("index.php", fetch_obj)
+        },
+    }).then((result) => {
+        if (result.isConfirmed) {
+            console.log("ok" + result);
+            remove_value();
+            selecte_table();
+            Swal.fire(
+                'value will deleted',
+                'done',
+            )
+        }
+    });
+}
+
